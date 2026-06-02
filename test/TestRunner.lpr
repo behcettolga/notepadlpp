@@ -14,7 +14,8 @@ uses
   uTestDocument,
   uTestSearch,
   uTestFindInFiles,
-  uTestEditorActions;
+  uTestEditorActions,
+  uTestConverters;
 
 var
   App: TTestRunner;

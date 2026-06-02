@@ -60,6 +60,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uTestEditorActions"/>
       </Unit>
+      <Unit>
+        <Filename Value="uTestConverters.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTestConverters"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
