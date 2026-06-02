@@ -11,7 +11,8 @@ uses
   uTestSmoke,
   uTestEncoding,
   uTestFileIO,
-  uTestDocument;
+  uTestDocument,
+  uTestSearch;
 
 var
   App: TTestRunner;
