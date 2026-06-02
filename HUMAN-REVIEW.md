@@ -5,13 +5,24 @@ _Audit these asynchronously. Each entry: what was done automatically + what to j
 
 ## UI / UX (form layout & "does it feel like NPP")
 - **[M0] Main window skeleton** — `docs/screenshots/m0-mainform.png`.
-  Done automatically: blank `TMainForm` hosts a client-aligned `TATSynEdit` showing placeholder
-  text; line numbers, ruler, EOL/EOF markers render; launches under xvfb without crashing.
-  To judge later: nothing actionable yet — real chrome (menu/toolbar/tabs/status bar) arrives in
-  M1/M3. This is just confirmation the editor core renders.
+  Blank `TMainForm` hosts a client-aligned `TATSynEdit`; line numbers/ruler/EOL markers render.
+- **[M1] Tabs + menu + highlighting** — `docs/screenshots/m1-python-highlight.png`,
+  `m1-json-highlight.png`. File menu (New/Open/Save/Save As/Reload/Recent/Close/Exit), one tab
+  per document, EControl syntax highlighting + code folding + line numbers + current-line.
+  To judge later (not blocking): this is plain LCL `TPageControl` chrome — no toolbar, no close
+  buttons on tabs, no status bar yet (status bar is M3). Whether the look "feels like NPP" is a
+  human call; the functional editing core is in place. The form is built entirely in code
+  (resourceless `CreateNew`) — intentional, no .lfm.
 
 ## Packaging (M5, validate on a clean Mint/Ubuntu VM)
 - _none yet._
+
+## Known gaps / follow-ups
+- **[M1] Curated lexer set incomplete.** The bundled `lexers/lib.lxl` (from ATSynEdit's lexlib)
+  covers JSON, XML, HTML, CSS, JavaScript, INI, Bash, Python, C, C++, Markdown — 11 of the 15
+  curated Phase-1 languages (spec §3.3). **Missing: SQL, YAML, Diff, Log.** These need additional
+  EControl `.lcf` lexers from the CudaText collection; tracked as a focused follow-up (spec §3.3
+  explicitly allows "wire the rest" later). Files of those types currently open as plain text.
 
 ## Decisions worth a sanity check
 - **[M0] gtk2 IME / `WITH_GTK2_IM`** (see STATUS.md "KEY TOOLCHAIN DECISION"). Upstream ATSynEdit
