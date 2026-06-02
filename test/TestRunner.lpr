@@ -10,7 +10,8 @@ uses
   Classes, consoletestrunner,
   uTestSmoke,
   uTestEncoding,
-  uTestFileIO;
+  uTestFileIO,
+  uTestDocument;
 
 var
   App: TTestRunner;

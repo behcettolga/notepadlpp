@@ -40,6 +40,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uTestFileIO"/>
       </Unit>
+      <Unit>
+        <Filename Value="uTestDocument.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTestDocument"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
