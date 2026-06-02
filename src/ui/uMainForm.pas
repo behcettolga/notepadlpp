@@ -11,8 +11,8 @@ interface
 
 uses
   Classes, SysUtils, StrUtils, Forms, Controls, ExtCtrls, Menus, ComCtrls, Dialogs,
-  uDocumentManager, uLexers, uTabManager, uDocument, uFindDialog,
-  uFindResultsPanel, uFindInFilesDialog, uFindInFiles, uSearchResults;
+  uDocumentManager, uLexers, uTabManager, uDocument, uEncoding, uEditorActions,
+  uFindDialog, uFindResultsPanel, uFindInFilesDialog, uFindInFiles, uSearchResults;
 
 const
   MaxRecent = 10;
@@ -39,6 +39,7 @@ type
     FFifData: TSearchResults;
     FFifThread: TFindInFilesThread;
     FFifPattern: string;
+    FStatus: TStatusBar;
     procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OpenCommandLineFiles;
@@ -57,6 +58,14 @@ type
     procedure RunFindInFiles(const AParams: TFindInFilesParams);
     procedure FifDone(Sender: TObject);
     procedure JumpToResult(const AFileName: string; ALine, ACol: Integer);
+    procedure BuildStatusBar;
+    procedure UpdateStatus(Sender: TObject);
+    procedure StatusMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure ApplyLineAction(AWholeDoc: Boolean; AAction: Integer);
+    procedure DoEditAction(Sender: TObject);
+    procedure SetEncoding(Sender: TObject);
+    procedure SetEol(Sender: TObject);
     procedure DoRecentClick(Sender: TObject);
     procedure PagesChange(Sender: TObject);
     procedure TabsState(Sender: TObject);
@@ -94,6 +103,9 @@ begin
   FLexers := TLexerLibrary.Create;
   FLexers.LoadFromFile(DefaultLexerLibFile); // silent if missing; editor still works
 
+  // Status bar first (alBottom) so it claims the bottom before alClient fills.
+  BuildStatusBar;
+
   // Find-in-Files results dock at the bottom (hidden until first search)
   FResultsHost := TPanel.Create(Self);
   FResultsHost.Parent := Self;
@@ -111,6 +123,7 @@ begin
 
   FTabs := TTabManager.Create(FPages, FDocs, FLexers);
   FTabs.OnState := @TabsState;
+  FTabs.OnCaretMove := @UpdateStatus;
 
   BuildMenu;
 
@@ -177,7 +190,7 @@ end;
 
 procedure TMainForm.BuildMenu;
 var
-  fileMenu, searchMenu, sep: TMenuItem;
+  fileMenu, editMenu, searchMenu, sep: TMenuItem;
 begin
   FMenu := TMainMenu.Create(Self);
   Self.Menu := FMenu;
@@ -203,6 +216,28 @@ begin
 
   AddItem(fileMenu, '&Close Tab', @DoCloseTab, 'Ctrl+W');
   AddItem(fileMenu, 'E&xit', @DoExit, 'Ctrl+Q');
+
+  editMenu := TMenuItem.Create(FMenu);
+  editMenu.Caption := '&Edit';
+  FMenu.Items.Add(editMenu);
+  // Tag encodes the action id consumed by DoEditAction.
+  AddItem(editMenu, '&Duplicate Line', @DoEditAction, 'Ctrl+D').Tag := 1;
+  AddItem(editMenu, 'De&lete Line', @DoEditAction, 'Ctrl+Shift+L').Tag := 2;
+  AddItem(editMenu, 'Move Line &Up', @DoEditAction, 'Ctrl+Shift+Up').Tag := 3;
+  AddItem(editMenu, 'Move Line Dow&n', @DoEditAction, 'Ctrl+Shift+Down').Tag := 4;
+  sep := TMenuItem.Create(FMenu); sep.Caption := '-'; editMenu.Add(sep);
+  AddItem(editMenu, '&Sort Lines (Asc)', @DoEditAction).Tag := 5;
+  AddItem(editMenu, 'Sort Lines (&Desc)', @DoEditAction).Tag := 6;
+  AddItem(editMenu, '&Remove Duplicate Lines', @DoEditAction).Tag := 7;
+  AddItem(editMenu, '&Trim Trailing Whitespace', @DoEditAction).Tag := 8;
+  sep := TMenuItem.Create(FMenu); sep.Caption := '-'; editMenu.Add(sep);
+  AddItem(editMenu, 'UPPER&CASE', @DoEditAction).Tag := 9;
+  AddItem(editMenu, 'lo&wercase', @DoEditAction).Tag := 10;
+  AddItem(editMenu, 'Title &Case', @DoEditAction).Tag := 11;
+  sep := TMenuItem.Create(FMenu); sep.Caption := '-'; editMenu.Add(sep);
+  AddItem(editMenu, 'Toggle Bloc&k Comment (//)', @DoEditAction, 'Ctrl+/').Tag := 12;
+  AddItem(editMenu, '&Indent', @DoEditAction).Tag := 13;
+  AddItem(editMenu, '&Outdent', @DoEditAction).Tag := 14;
 
   searchMenu := TMenuItem.Create(FMenu);
   searchMenu.Caption := '&Search';
@@ -366,6 +401,166 @@ begin
   UpdateTitle;
 end;
 
+procedure TMainForm.BuildStatusBar;
+  procedure AddPanel(AWidth: Integer);
+  begin
+    with FStatus.Panels.Add do Width := AWidth;
+  end;
+begin
+  FStatus := TStatusBar.Create(Self);
+  FStatus.Parent := Self;
+  FStatus.SimplePanel := False;
+  AddPanel(160); // caret line/col
+  AddPanel(110); // selection
+  AddPanel(110); // total lines
+  AddPanel(140); // encoding (clickable)
+  AddPanel(70);  // EOL (clickable)
+  AddPanel(160); // language
+  FStatus.OnMouseDown := @StatusMouseDown;
+end;
+
+procedure TMainForm.UpdateStatus(Sender: TObject);
+var
+  ln, col, selc, total: Integer;
+  doc: TDocument;
+begin
+  if (FStatus = nil) or (FTabs = nil) then Exit;
+  if FTabs.ActiveCaretInfo(ln, col, selc, total) then
+  begin
+    FStatus.Panels[0].Text := Format('Ln %d, Col %d', [ln, col]);
+    if selc > 0 then
+      FStatus.Panels[1].Text := Format('Sel %d', [selc])
+    else
+      FStatus.Panels[1].Text := '';
+    FStatus.Panels[2].Text := Format('%d lines', [total]);
+  end;
+  doc := FDocs.Active;
+  if doc <> nil then
+  begin
+    FStatus.Panels[3].Text := uEncoding.EncodingName(doc.Encoding);
+    FStatus.Panels[4].Text := LineEndingKindName(doc.LineEnding);
+  end;
+  FStatus.Panels[5].Text := FTabs.ActiveLexerName;
+end;
+
+procedure TMainForm.StatusMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  i, acc: Integer;
+  panelIdx: Integer;
+  pm: TPopupMenu;
+  mi: TMenuItem;
+  enc: TFileEncoding;
+  eol: TLineEndingKind;
+begin
+  // determine which panel was clicked from X + accumulated widths
+  acc := 0; panelIdx := -1;
+  for i := 0 to FStatus.Panels.Count - 1 do
+  begin
+    Inc(acc, FStatus.Panels[i].Width);
+    if X < acc then begin panelIdx := i; Break; end;
+  end;
+  if FDocs.Active = nil then Exit;
+
+  if panelIdx = 3 then // encoding
+  begin
+    pm := TPopupMenu.Create(Self);
+    for enc := Low(TFileEncoding) to High(TFileEncoding) do
+    begin
+      mi := TMenuItem.Create(pm);
+      mi.Caption := uEncoding.EncodingName(enc);
+      mi.Tag := Ord(enc);
+      mi.OnClick := @SetEncoding;
+      pm.Items.Add(mi);
+    end;
+    pm.PopUp;
+  end
+  else if panelIdx = 4 then // EOL
+  begin
+    pm := TPopupMenu.Create(Self);
+    for eol := Low(TLineEndingKind) to High(TLineEndingKind) do
+    begin
+      mi := TMenuItem.Create(pm);
+      mi.Caption := LineEndingKindName(eol);
+      mi.Tag := Ord(eol);
+      mi.OnClick := @SetEol;
+      pm.Items.Add(mi);
+    end;
+    pm.PopUp;
+  end;
+end;
+
+procedure TMainForm.SetEncoding(Sender: TObject);
+var doc: TDocument;
+begin
+  doc := FDocs.Active;
+  if doc <> nil then
+  begin
+    doc.Encoding := TFileEncoding((Sender as TMenuItem).Tag);
+    FTabs.UpdateCaption(FTabs.ActiveTab);
+    UpdateStatus(Sender);
+    UpdateTitle;
+  end;
+end;
+
+procedure TMainForm.SetEol(Sender: TObject);
+var doc: TDocument;
+begin
+  doc := FDocs.Active;
+  if doc <> nil then
+  begin
+    doc.LineEnding := TLineEndingKind((Sender as TMenuItem).Tag);
+    FTabs.UpdateCaption(FTabs.ActiveTab);
+    UpdateStatus(Sender);
+    UpdateTitle;
+  end;
+end;
+
+procedure TMainForm.ApplyLineAction(AWholeDoc: Boolean; AAction: Integer);
+var
+  lines: TLines;
+  af, at_: Integer;
+  srcText: string;
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  srcText := FTabs.ActiveTextLF;
+  lines := srcText.Split([#10]);
+  if not FTabs.ActiveSelLineRange(af, at_) then begin af := 0; at_ := 0; end;
+
+  case AAction of
+    1: lines := DuplicateLines(lines, af, at_);
+    2: lines := DeleteLines(lines, af, at_);
+    3: lines := MoveLinesUp(lines, af, at_);
+    4: lines := MoveLinesDown(lines, af, at_);
+    5: lines := SortLines(lines, True, True);
+    6: lines := SortLines(lines, False, True);
+    7: lines := RemoveDuplicateLines(lines);
+    12: lines := ToggleLineComment(lines, af, at_, '//');
+    13: lines := IndentLines(lines, af, at_, '    ');
+    14: lines := OutdentLines(lines, af, at_, 4);
+  end;
+  FTabs.SetActiveTextLF(string.Join(#10, lines));
+end;
+
+procedure TMainForm.DoEditAction(Sender: TObject);
+var
+  actionTag: Integer;
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  actionTag := (Sender as TMenuItem).Tag;
+  case actionTag of
+    8:  FTabs.SetActiveTextLF(TrimTrailingWhitespacePerLine(FTabs.ActiveTextLF));
+    9:  FTabs.SetActiveTextLF(CaseUpper(FTabs.ActiveTextLF));
+    10: FTabs.SetActiveTextLF(CaseLower(FTabs.ActiveTextLF));
+    11: FTabs.SetActiveTextLF(CaseTitle(FTabs.ActiveTextLF));
+  else
+    ApplyLineAction(False, actionTag);
+  end;
+  FTabs.UpdateCaption(FTabs.ActiveTab);
+  UpdateStatus(Sender);
+  UpdateTitle;
+end;
+
 procedure TMainForm.DoRecentClick(Sender: TObject);
 var fn: string;
 begin
@@ -387,6 +582,7 @@ end;
 procedure TMainForm.TabsState(Sender: TObject);
 begin
   UpdateTitle;
+  UpdateStatus(Sender);
 end;
 
 procedure TMainForm.AddRecent(const AFileName: string);
