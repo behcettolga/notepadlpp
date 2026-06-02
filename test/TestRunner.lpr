@@ -9,7 +9,8 @@ uses
   {$ENDIF}
   Classes, consoletestrunner,
   uTestSmoke,
-  uTestEncoding;
+  uTestEncoding,
+  uTestFileIO;
 
 var
   App: TTestRunner;

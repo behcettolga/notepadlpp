@@ -35,6 +35,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uTestEncoding"/>
       </Unit>
+      <Unit>
+        <Filename Value="uTestFileIO.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTestFileIO"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
