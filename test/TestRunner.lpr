@@ -12,7 +12,8 @@ uses
   uTestEncoding,
   uTestFileIO,
   uTestDocument,
-  uTestSearch;
+  uTestSearch,
+  uTestFindInFiles;
 
 var
   App: TTestRunner;
