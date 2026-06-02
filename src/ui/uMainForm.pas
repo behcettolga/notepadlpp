@@ -10,8 +10,9 @@ unit uMainForm;
 interface
 
 uses
-  Classes, SysUtils, StrUtils, Forms, Controls, Menus, ComCtrls, Dialogs,
-  uDocumentManager, uLexers, uTabManager, uDocument, uFindDialog;
+  Classes, SysUtils, StrUtils, Forms, Controls, ExtCtrls, Menus, ComCtrls, Dialogs,
+  uDocumentManager, uLexers, uTabManager, uDocument, uFindDialog,
+  uFindResultsPanel, uFindInFilesDialog, uFindInFiles, uSearchResults;
 
 const
   MaxRecent = 10;
@@ -32,6 +33,12 @@ type
     FRecentMenu: TMenuItem;
     FRecent: TStringList;
     FFindDlg: TFindDialog;
+    FResultsHost: TPanel;
+    FResults: TFindResultsPanel;
+    FFifDlg: TFindInFilesDialog;
+    FFifData: TSearchResults;
+    FFifThread: TFindInFilesThread;
+    FFifPattern: string;
     procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OpenCommandLineFiles;
@@ -46,6 +53,10 @@ type
     procedure DoCloseTab(Sender: TObject);
     procedure DoExit(Sender: TObject);
     procedure DoFindReplace(Sender: TObject);
+    procedure DoFindInFiles(Sender: TObject);
+    procedure RunFindInFiles(const AParams: TFindInFilesParams);
+    procedure FifDone(Sender: TObject);
+    procedure JumpToResult(const AFileName: string; ALine, ACol: Integer);
     procedure DoRecentClick(Sender: TObject);
     procedure PagesChange(Sender: TObject);
     procedure TabsState(Sender: TObject);
@@ -83,6 +94,16 @@ begin
   FLexers := TLexerLibrary.Create;
   FLexers.LoadFromFile(DefaultLexerLibFile); // silent if missing; editor still works
 
+  // Find-in-Files results dock at the bottom (hidden until first search)
+  FResultsHost := TPanel.Create(Self);
+  FResultsHost.Parent := Self;
+  FResultsHost.Align := alBottom;
+  FResultsHost.Height := 170;
+  FResultsHost.BevelOuter := bvNone;
+  FResultsHost.Visible := False;
+  FResults := TFindResultsPanel.Create(FResultsHost);
+  FResults.OnJump := @JumpToResult;
+
   FPages := TPageControl.Create(Self);
   FPages.Parent := Self;
   FPages.Align := alClient;
@@ -119,6 +140,14 @@ end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
+  if FFifThread <> nil then
+  begin
+    FFifThread.CancelSearch;
+    FFifThread.WaitFor;
+    FreeAndNil(FFifThread);
+  end;
+  FFifData.Free;
+  FResults.Free;
   FTabs.Free;
   FLexers.Free;
   FDocs.Free;
@@ -180,6 +209,7 @@ begin
   FMenu.Items.Add(searchMenu);
   AddItem(searchMenu, '&Find...', @DoFindReplace, 'Ctrl+F');
   AddItem(searchMenu, '&Replace...', @DoFindReplace, 'Ctrl+H');
+  AddItem(searchMenu, 'Find in &Files...', @DoFindInFiles, 'Ctrl+Shift+F');
 end;
 
 procedure TMainForm.DoNew(Sender: TObject);
@@ -286,6 +316,54 @@ begin
   if FFindDlg = nil then
     FFindDlg := TFindDialog.CreateFor(Self, FTabs);
   FFindDlg.ShowFor(True);
+end;
+
+procedure TMainForm.DoFindInFiles(Sender: TObject);
+var
+  startDir: string;
+  tab: TEditorTab;
+begin
+  if FFifDlg = nil then
+  begin
+    FFifDlg := TFindInFilesDialog.CreateNewDlg(Self);
+    FFifDlg.OnExecute := @RunFindInFiles;
+  end;
+  startDir := '';
+  tab := FTabs.ActiveTab;
+  if (tab <> nil) and (not tab.Doc.Untitled) then
+    startDir := ExtractFileDir(tab.Doc.FilePath);
+  FFifDlg.ShowWithDir(startDir);
+end;
+
+procedure TMainForm.RunFindInFiles(const AParams: TFindInFilesParams);
+begin
+  // finish/cleanup any prior search
+  if FFifThread <> nil then
+  begin
+    FFifThread.CancelSearch;
+    FFifThread.WaitFor;
+    FreeAndNil(FFifThread);
+  end;
+  FreeAndNil(FFifData);
+
+  FFifData := TSearchResults.Create;
+  FFifPattern := AParams.Pattern;
+  FResultsHost.Visible := True;
+  FFifThread := TFindInFilesThread.Create(AParams, FFifData, @FifDone);
+  FFifThread.Start;
+end;
+
+procedure TMainForm.FifDone(Sender: TObject);
+begin
+  // runs on the main thread (Synchronize) when the worker finishes
+  FResults.ShowResults(FFifData, FFifPattern);
+end;
+
+procedure TMainForm.JumpToResult(const AFileName: string; ALine, ACol: Integer);
+begin
+  FTabs.OpenFileInTab(AFileName);
+  FTabs.GotoLineCol(ALine, ACol);
+  UpdateTitle;
 end;
 
 procedure TMainForm.DoRecentClick(Sender: TObject);
