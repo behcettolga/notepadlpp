@@ -1,0 +1,26 @@
+# Build output
+lib/
+*.o
+*.ppu
+*.compiled
+*.or
+*.a
+*.res
+backup/
+
+# Lazarus session/user files
+*.lps
+*.bak
+
+# Compiled binaries / test runner
+/notepadlpp
+/NotepadLPP
+/test/TestRunner
+/test/testrunner
+
+# Editor/OS noise
+*~
+.DS_Store
+
+# Local dependency checkout (cloned outside or under deps/, never committed)
+/deps/
