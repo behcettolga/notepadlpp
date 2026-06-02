@@ -2,7 +2,22 @@
 
 _Authoritative async progress log. Updated at every milestone boundary._
 
-## Current milestone: **M2 — Search / Replace / Find-in-Files** ✅ COMPLETE
+## Current milestone: **M3 — Editing operations & status bar** ✅ COMPLETE
+
+### M3 acceptance (ARCHITECTURE §5)
+- `uEditorActions` (UI-free): duplicate/delete/move/sort/dedup/trim, UTF-8 case
+  (UPPER/lower/Title), comment-toggle, indent/outdent. 14 string-fixture tests. ✅
+- Edit menu wires those to the active editor (line range from selection). ✅
+- Interactive status bar: Ln/Col, selection length, line count, encoding, EOL, language;
+  live on caret move / edit / tab switch; encoding & EOL **click-to-change**. ✅
+  (verified populated under xvfb — `docs/screenshots/m3-statusbar.png`)
+- ci.sh: app builds; **66/66 headless tests pass**.
+
+Interactive edit-action feel + popups → HUMAN-REVIEW (line ops currently re-set whole text).
+
+---
+
+## M2 — Search / Replace / Find-in-Files ✅ COMPLETE
 
 ### M2 acceptance (ARCHITECTURE §5)
 - `uSearchEngine` (UI-free): plain / match-case / whole-word / regex (TRegExpr) / wrap /
@@ -74,17 +89,18 @@ This keeps modern components + gtk2 (per kickoff) with zero changes to upstream 
 - Gate: `./ci.sh` (build app + tests + run tests) or `./ci.sh --app-run` (also xvfb GUI smoke).
 - Latest `./ci.sh --app-run`: **CI PASSED** — app links; tests 1 run / 0 failures; app launched under xvfb, no crash.
 
-### Next: **M3 — Editing operations & status bar**
-- `src/editor/uEditorActions` (UI-free, tested): duplicate / move / delete / sort / dedup /
-  trim trailing ws / case convert (UPPER/lower/Title) / comment-toggle / indent-outdent.
-- Interactive status bar: caret line/col, selection length, total lines/chars, encoding, EOL,
-  language — encoding & EOL clickable to change.
-- Accept: uEditorActions tests on string fixtures; status bar reflects + mutates live.
+### Next: **M4 — Built-in tools**
+- `src/tools/` (UI-free, tested): uJsonTool (pretty/minify/validate w/ error pos),
+  uXmlTool (format/validate), uCsvTool (parse → rows/cols), uConverters (base64, URL,
+  UUID, hash MD5/SHA-1/SHA-256, numeric base).
+- UI: CSV grid viewer, converters dialog; Tools menu.
+- Accept: tools/ suites pass against known vectors (RFC 4648 Base64, NIST SHA-256,
+  malformed-JSON error position).
 
 ### Follow-ups carried forward
 - Complete curated lexer set: add SQL, YAML, Diff, Log (spec §3.3) — see HUMAN-REVIEW.md.
 
 ### Decisions taken
 - Pinned modern (2026) component set; gtk2 IME handled via project-local LCL rebuild (above).
-- Git: `develop`; M0/M1/M2 tagged `M0-complete`/`M1-complete`/`M2-complete` (merged to `main`).
-  Now pushing `develop` after each unit for live visibility; milestone tags land on `main`.
+- Git: `develop`; M0–M3 tagged `M0-complete`…`M3-complete` (merged to `main`).
+  Pushing `develop` after each unit for live visibility; milestone tags land on `main`.

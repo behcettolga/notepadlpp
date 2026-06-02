@@ -20,6 +20,15 @@ _Audit these asynchronously. Each entry: what was done automatically + what to j
   later (not blocking): interactive behaviour (does Find Next/Replace feel right, focus handling,
   non-modal placement) needs a manual click-through — headless can't drive the dialog.
 
+- **[M3] Edit menu + status bar** (`docs/screenshots/m3-statusbar.png`). Edit menu wires
+  uEditorActions (duplicate/delete/move/sort/dedup/trim/case/comment/indent). Status bar shows
+  `Ln/Col`, selection length, line count, encoding, EOL, language — encoding & EOL panels are
+  click-to-change (popup). Builds + launches clean; status bar verified populated under xvfb.
+  To judge later (not blocking): interactive feel of the edit actions + click-to-change popups
+  needs a manual click-through. Note: line-based edit actions currently re-set the whole editor
+  text (caret resets, single undo step) — acceptable for M3, candidate for finer-grained editing
+  later.
+
 ## Packaging (M5, validate on a clean Mint/Ubuntu VM)
 - _none yet._
 
