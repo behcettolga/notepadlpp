@@ -8,7 +8,10 @@ uses
   cthreads,
   {$ENDIF}
   Classes, consoletestrunner,
-  uTestSmoke;
+  uTestSmoke,
+  uTestEncoding,
+  uTestFileIO,
+  uTestDocument;
 
 var
   App: TTestRunner;

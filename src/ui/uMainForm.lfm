@@ -1,9 +1,0 @@
-object MainForm: TMainForm
-  Left = 300
-  Top = 200
-  Width = 900
-  Height = 600
-  Caption = 'NotepadL++'
-  OnCreate = FormCreate
-  LCLVersion = '3.0.0.0'
-end

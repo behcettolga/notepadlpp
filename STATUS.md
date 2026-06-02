@@ -2,7 +2,29 @@
 
 _Authoritative async progress log. Updated at every milestone boundary._
 
-## Current milestone: **M0 — Toolchain & skeleton** ✅ COMPLETE
+## Current milestone: **M1 — Editor core, file I/O, tabs, encoding** ✅ COMPLETE
+
+### M1 acceptance (ARCHITECTURE §5)
+- DocumentManager + tabs; New/Open/Save/Save As/Reload/Recent/Close. ✅
+- Encoding detect/convert + EOL detect/convert — `uEncoding`, behind `IEncodingService`. ✅
+- **Byte-exact round-trip** save for UTF-8, UTF-8+BOM, UTF-16LE, UTF-16BE, CP-1252 — fpcunit
+  fixtures (`uTestEncoding`, `uTestFileIO`) write real files, reload, compare bytes. ✅
+- EOL conversion verified by tests. ✅
+- Line numbers + EControl syntax highlighting (+ code folding). ✅
+  Verified under xvfb: `docs/screenshots/m1-python-highlight.png`, `m1-json-highlight.png`.
+- ci.sh: app builds; **34/34 headless tests pass**.
+
+**Known gap (documented, spec §3.3 deferral):** bundled `lexers/lib.lxl` covers 11/15 curated
+languages (JSON, XML, HTML, CSS, JS, INI, Bash, Python, C, C++, Markdown). **SQL, YAML, Diff, Log**
+lexers are a tracked follow-up (need extra EControl `.lcf` from CudaText); such files open as plain
+text meanwhile. See HUMAN-REVIEW.md.
+
+Core layering held: `core/` (encoding, fileio, document) is UI-free and fully unit-tested; editor
+integration (`editor/`, `ui/`) validated by build + xvfb. Main form is resourceless (code-built).
+
+---
+
+## M0 — Toolchain & skeleton ✅ COMPLETE
 
 ### M0 acceptance (ARCHITECTURE §5) — met
 - `lazbuild NotepadLPP.lpi` exits 0 (gtk2). ✅
@@ -33,12 +55,15 @@ This keeps modern components + gtk2 (per kickoff) with zero changes to upstream 
 - Gate: `./ci.sh` (build app + tests + run tests) or `./ci.sh --app-run` (also xvfb GUI smoke).
 - Latest `./ci.sh --app-run`: **CI PASSED** — app links; tests 1 run / 0 failures; app launched under xvfb, no crash.
 
-### Next: **M1 — Editor core, file I/O, tabs, encoding**
-- `src/core/`: uDocument, uDocumentManager, uEncoding (interface + EncConv impl; UTF-8 ±BOM, UTF-16 LE/BE, CP-1252), uFileIO (byte-exact round-trip), uSession, uConfig.
-- `src/editor/`: uEditorFactory, uLexers (EControl curated set), uEditorActions.
-- Tabs + New/Open/Save/Save As/Reload/Recent; line numbers; highlighting.
-- fpcunit fixtures for byte-exact encoding round-trips + EOL conversion.
+### Next: **M2 — Search / Replace / Find-in-Files**
+- `src/search/`: uSearchEngine (plain/case/word/regex via TRegExpr, replace-all, count, mark-all),
+  uFindInFiles (threaded dir walk + masks + recursion), uSearchResults model — all UI-free + tested.
+- UI: Find/Replace dialog, find-results panel (double-click → jump to file+line).
+- Accept: uSearchEngine + uFindInFiles fpcunit suites pass on fixtures.
+
+### Follow-ups carried forward
+- Complete curated lexer set: add SQL, YAML, Diff, Log (spec §3.3) — see HUMAN-REVIEW.md.
 
 ### Decisions taken
 - Pinned modern (2026) component set; gtk2 IME handled via project-local LCL rebuild (above).
-- Git: `develop` branch; M0 merged to `main` + tagged `M0-complete`.
+- Git: `develop`; M0 tagged `M0-complete`, M1 tagged `M1-complete` (merged to `main`).

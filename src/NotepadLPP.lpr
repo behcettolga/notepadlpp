@@ -14,7 +14,8 @@ uses
 {$R *.res}
 
 begin
-  RequireDerivedFormResource := True;
+  // TMainForm is resourceless (built in code, created via CreateNew), so we do
+  // not require derived-form .lfm resources.
   Application.Title := 'NotepadL++';
   Application.Scaled := True;
   Application.Initialize;
