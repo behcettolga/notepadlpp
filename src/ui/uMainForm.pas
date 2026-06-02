@@ -11,7 +11,7 @@ interface
 
 uses
   Classes, SysUtils, StrUtils, Forms, Controls, Menus, ComCtrls, Dialogs,
-  uDocumentManager, uLexers, uTabManager, uDocument;
+  uDocumentManager, uLexers, uTabManager, uDocument, uFindDialog;
 
 const
   MaxRecent = 10;
@@ -31,6 +31,7 @@ type
     FMenu: TMainMenu;
     FRecentMenu: TMenuItem;
     FRecent: TStringList;
+    FFindDlg: TFindDialog;
     procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OpenCommandLineFiles;
@@ -44,6 +45,7 @@ type
     procedure DoReload(Sender: TObject);
     procedure DoCloseTab(Sender: TObject);
     procedure DoExit(Sender: TObject);
+    procedure DoFindReplace(Sender: TObject);
     procedure DoRecentClick(Sender: TObject);
     procedure PagesChange(Sender: TObject);
     procedure TabsState(Sender: TObject);
@@ -146,7 +148,7 @@ end;
 
 procedure TMainForm.BuildMenu;
 var
-  fileMenu, sep: TMenuItem;
+  fileMenu, searchMenu, sep: TMenuItem;
 begin
   FMenu := TMainMenu.Create(Self);
   Self.Menu := FMenu;
@@ -172,6 +174,12 @@ begin
 
   AddItem(fileMenu, '&Close Tab', @DoCloseTab, 'Ctrl+W');
   AddItem(fileMenu, 'E&xit', @DoExit, 'Ctrl+Q');
+
+  searchMenu := TMenuItem.Create(FMenu);
+  searchMenu.Caption := '&Search';
+  FMenu.Items.Add(searchMenu);
+  AddItem(searchMenu, '&Find...', @DoFindReplace, 'Ctrl+F');
+  AddItem(searchMenu, '&Replace...', @DoFindReplace, 'Ctrl+H');
 end;
 
 procedure TMainForm.DoNew(Sender: TObject);
@@ -271,6 +279,13 @@ end;
 procedure TMainForm.DoExit(Sender: TObject);
 begin
   Close;
+end;
+
+procedure TMainForm.DoFindReplace(Sender: TObject);
+begin
+  if FFindDlg = nil then
+    FFindDlg := TFindDialog.CreateFor(Self, FTabs);
+  FFindDlg.ShowFor(True);
 end;
 
 procedure TMainForm.DoRecentClick(Sender: TObject);
