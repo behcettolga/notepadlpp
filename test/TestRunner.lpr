@@ -15,7 +15,8 @@ uses
   uTestSearch,
   uTestFindInFiles,
   uTestEditorActions,
-  uTestConverters;
+  uTestConverters,
+  uTestTools;
 
 var
   App: TTestRunner;
