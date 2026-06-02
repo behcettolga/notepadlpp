@@ -11,7 +11,7 @@ unit uTabManager;
 interface
 
 uses
-  Classes, SysUtils, Controls, ComCtrls,
+  Classes, SysUtils, Types, Controls, ComCtrls,
   ATSynEdit, ATSynEdit_Adapter_EControl,
   uDocument, uDocumentManager, uLexers, uEditorFactory, uEncoding;
 
@@ -53,6 +53,7 @@ type
     procedure CloseActiveTab;
     procedure ReloadActive;
     procedure RefreshActiveLexer;
+    procedure GotoLineCol(ALine, ACol: Integer);
     procedure UpdateCaption(ATab: TEditorTab);
     procedure PageChanged;
     property OnState: TNotifyEvent read FOnState write FOnState;
@@ -231,6 +232,25 @@ begin
   if t = nil then Exit;
   ApplyLexer(t);
   UpdateCaption(t);
+end;
+
+procedure TTabManager.GotoLineCol(ALine, ACol: Integer);
+var t: TEditorTab;
+begin
+  t := ActiveTab;
+  if t = nil then Exit;
+  if ALine < 1 then ALine := 1;
+  if ACol < 1 then ACol := 1;
+  // ATSynEdit coords are 0-based (col, line)
+  t.Editor.DoGotoPos(
+    Point(ACol - 1, ALine - 1),
+    Point(-1, -1),
+    10, 5,
+    True,
+    TATEditorActionIfFolded.Unfold,
+    False, False);
+  if t.Editor.CanSetFocus then
+    t.Editor.SetFocus;
 end;
 
 procedure TTabManager.PageChanged;

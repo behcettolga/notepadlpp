@@ -14,6 +14,12 @@ _Audit these asynchronously. Each entry: what was done automatically + what to j
   human call; the functional editing core is in place. The form is built entirely in code
   (resourceless `CreateNew`) — intentional, no .lfm.
 
+- **[M2] Find/Replace dialog** (`uFindDialog`). Code-built dialog using ATSynEdit's
+  `TATEditorFinder` against the active editor: Find Next / Replace / Replace All / Count, with
+  match-case / whole-word / regex / wrap options. Builds + app launches clean under xvfb. To judge
+  later (not blocking): interactive behaviour (does Find Next/Replace feel right, focus handling,
+  non-modal placement) needs a manual click-through — headless can't drive the dialog.
+
 ## Packaging (M5, validate on a clean Mint/Ubuntu VM)
 - _none yet._
 
