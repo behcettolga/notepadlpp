@@ -1,0 +1,22 @@
+# DEPENDENCIES.lock — pinned working set for NotepadL++ (resolved at M0)
+#
+# Toolchain: FPC 3.2.2, Lazarus 3.0 (distro), widgetset gtk2.
+# Build via:  ./ci.sh   (uses lazbuild --lazarusdir=deps/lazarus-im --ws=gtk2)
+#
+# IMPORTANT (gtk2 IME): upstream ATSynEdit calls IM_Context_Set_Cursor_Pos, which the
+# LCL only exports when compiled with the WITH_GTK2_IM define. Stock distro LCL is built
+# WITHOUT it. We do NOT modify the system Lazarus. Instead:
+#   1. A user-owned copy of the Lazarus tree lives at deps/lazarus-im (see scripts/setup-deps.sh).
+#   2. Each project .lpi carries a 'SharedMatrixOptions' custom option -dWITH_GTK2_IM applied
+#      to Targets '#project,LCL', so lazbuild recompiles the gtk2 LCL with the define.
+#   3. All builds pass --lazarusdir=deps/lazarus-im so that recompile is writable.
+#
+# Pinned component commits (clone under deps/<name>, git checkout <commit>):
+
+ATSynEdit       0d75ed45ac563a8571e164e2e782190b85d6b7aa  2026-05-18  # https://github.com/Alexey-T/ATSynEdit.git
+ATSynEdit_Cmp   e5d23b9841bbb6ad9487778ba5ff5f4f966d5c1b  2026-04-03  # https://github.com/Alexey-T/ATSynEdit_Cmp.git
+ATSynEdit_Ex    808020b45879b12817dbfe1d153832a438df7353  2026-03-19  # https://github.com/Alexey-T/ATSynEdit_Ex.git
+EControl        847ce66a1261cdd5b00ae1d348deba21b5e8aeeb  2026-05-03  # https://github.com/Alexey-T/EControl.git
+EncConv         8caaa6b9838b2587d1d0a007dbc4a728a1306a72  2024-12-15  # https://github.com/Alexey-T/EncConv.git
+ATFlatControls  11594c79aa79f8d4d532dc53dde5b2f558301420  2026-05-05  # https://github.com/Alexey-T/ATFlatControls.git
+BGRABitmap      44a65262e214feb89605d4bb555771f1a3f2df29  2026-02-02  # https://github.com/bgrabitmap/bgrabitmap.git
