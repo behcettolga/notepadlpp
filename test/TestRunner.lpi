@@ -55,6 +55,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uTestFindInFiles"/>
       </Unit>
+      <Unit>
+        <Filename Value="uTestEditorActions.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTestEditorActions"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -13,7 +13,8 @@ uses
   uTestFileIO,
   uTestDocument,
   uTestSearch,
-  uTestFindInFiles;
+  uTestFindInFiles,
+  uTestEditorActions;
 
 var
   App: TTestRunner;
