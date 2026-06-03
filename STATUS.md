@@ -2,7 +2,20 @@
 
 _Authoritative async progress log. Updated at every milestone boundary._
 
-## Current milestone: **M3 — Editing operations & status bar** ✅ COMPLETE
+## Current milestone: **M4 — Built-in tools** ✅ COMPLETE
+
+### M4 acceptance (ARCHITECTURE §5)
+- `uConverters` + `uSHA256`: Base64 (RFC 4648), URL, UUID, MD5/SHA-1, **SHA-256
+  (from-scratch, 3 NIST vectors)**, numeric base 2..36. ✅
+- `uJsonTool` (pretty/minify/validate w/ error position), `uXmlTool` (format/validate),
+  `uCsvTool` (quote-aware parse + delimiter detect). ✅
+- 24 tool tests (RFC 4648, RFC 1321 MD5, NIST SHA-256, malformed-JSON position, etc.). ✅
+- UI: Tools menu (JSON/XML actions on active doc), `uCsvViewer` grid, `uConvertersDlg`. ✅
+- ci.sh: app builds; **90/90 headless tests pass**.
+
+---
+
+## M3 — Editing operations & status bar ✅ COMPLETE
 
 ### M3 acceptance (ARCHITECTURE §5)
 - `uEditorActions` (UI-free): duplicate/delete/move/sort/dedup/trim, UTF-8 case
@@ -89,18 +102,17 @@ This keeps modern components + gtk2 (per kickoff) with zero changes to upstream 
 - Gate: `./ci.sh` (build app + tests + run tests) or `./ci.sh --app-run` (also xvfb GUI smoke).
 - Latest `./ci.sh --app-run`: **CI PASSED** — app links; tests 1 run / 0 failures; app launched under xvfb, no crash.
 
-### Next: **M4 — Built-in tools**
-- `src/tools/` (UI-free, tested): uJsonTool (pretty/minify/validate w/ error pos),
-  uXmlTool (format/validate), uCsvTool (parse → rows/cols), uConverters (base64, URL,
-  UUID, hash MD5/SHA-1/SHA-256, numeric base).
-- UI: CSV grid viewer, converters dialog; Tools menu.
-- Accept: tools/ suites pass against known vectors (RFC 4648 Base64, NIST SHA-256,
-  malformed-JSON error position).
+### Next: **M5 — Persistence, theming, packaging**
+- `src/core/`: uConfig (JSON settings via fpjson), uSession (reopen last files + window
+  geometry on launch), recent-files persistence.
+- `src/ui/uTheme`: light + dark theme applied to editor colors.
+- `packaging/`: AppImage and/or .deb that installs + launches on a clean Mint/Ubuntu VM.
+- Accept: settings + open files survive restart; theme toggles live; packaging artifact runs.
 
 ### Follow-ups carried forward
 - Complete curated lexer set: add SQL, YAML, Diff, Log (spec §3.3) — see HUMAN-REVIEW.md.
 
 ### Decisions taken
 - Pinned modern (2026) component set; gtk2 IME handled via project-local LCL rebuild (above).
-- Git: `develop`; M0–M3 tagged `M0-complete`…`M3-complete` (merged to `main`).
+- Git: `develop`; M0–M4 tagged `M0-complete`…`M4-complete` (merged to `main`).
   Pushing `develop` after each unit for live visibility; milestone tags land on `main`.

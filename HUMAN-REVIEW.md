@@ -29,6 +29,12 @@ _Audit these asynchronously. Each entry: what was done automatically + what to j
   text (caret resets, single undo step) — acceptable for M3, candidate for finer-grained editing
   later.
 
+- **[M4] Tools menu + dialogs** (`docs/screenshots/m4-tools-menu.png`). Tools menu: JSON
+  pretty/minify/validate + XML format/validate (operate on the active doc), View as CSV Grid
+  (`uCsvViewer` TStringGrid), and Converters dialog (`uConvertersDlg`: base64/url/uuid/hash/base).
+  All driven by the unit-tested tool cores. Builds + launches clean. To judge later (not blocking):
+  interactive click-through of the converters dialog + CSV grid layout/usability.
+
 ## Packaging (M5, validate on a clean Mint/Ubuntu VM)
 - _none yet._
 
