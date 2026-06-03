@@ -105,6 +105,12 @@ begin
   // running from build tree: <repo>/notepadlpp lives at repo root, lexers/ beside it
   cand := exeDir + '..' + PathDelim + 'lexers' + PathDelim + 'lib.lxl';
   if FileExists(cand) then Exit(cand);
+  // FHS install (and AppImage AppDir): /usr/bin/notepadlpp -> /usr/share/notepadlpp/lexers
+  cand := exeDir + '..' + PathDelim + 'share' + PathDelim + 'notepadlpp' +
+          PathDelim + 'lexers' + PathDelim + 'lib.lxl';
+  if FileExists(cand) then Exit(cand);
+  cand := '/usr/share/notepadlpp/lexers/lib.lxl';
+  if FileExists(cand) then Exit(cand);
   Result := '';
 end;
 

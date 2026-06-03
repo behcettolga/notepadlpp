@@ -13,7 +13,7 @@ interface
 uses
   Classes, SysUtils, Types, Math, Controls, ComCtrls,
   ATSynEdit, ATSynEdit_Carets, ATSynEdit_Adapter_EControl,
-  uDocument, uDocumentManager, uLexers, uEditorFactory, uEncoding;
+  uDocument, uDocumentManager, uLexers, uEditorFactory, uEncoding, uTheme;
 
 type
 
@@ -35,6 +35,7 @@ type
     FLexers: TLexerLibrary;
     FTabs: TList;          // of TEditorTab
     FLoading: Boolean;     // guard: programmatic editor text changes
+    FTheme: TEditorTheme;  // applied to every editor, incl. tabs opened later
     FOnState: TNotifyEvent;
     FOnCaretMove: TNotifyEvent;
     function MakeTab(ADoc: TDocument): TEditorTab;
@@ -58,6 +59,16 @@ type
     procedure GotoLineCol(ALine, ACol: Integer);
     procedure UpdateCaption(ATab: TEditorTab);
     procedure PageChanged;
+    // theming: SetTheme repaints all open editors and is remembered for new tabs
+    procedure SetTheme(const ATheme: TEditorTheme);
+    function CurrentThemeName: string;
+    // session enumeration helpers (UI may depend on core/uSession)
+    function TabCount: Integer;
+    function TabAt(AIndex: Integer): TEditorTab;
+    function ActiveIndex: Integer;
+    procedure ActivateIndex(AIndex: Integer);
+    procedure SetCaret(ATab: TEditorTab; ALine, ACol: Integer);
+    procedure GetCaret(ATab: TEditorTab; out ALine, ACol: Integer);
     // status-bar / edit-action helpers operating on the active editor
     function ActiveTextLF: string;
     procedure SetActiveTextLF(const ATextLF: string);
@@ -79,6 +90,7 @@ begin
   FLexers := ALexers;
   FTabs := TList.Create;
   FLoading := False;
+  FTheme := LightTheme;
 end;
 
 destructor TTabManager.Destroy;
@@ -111,6 +123,7 @@ begin
   Result.Editor.OnChangeCaretPos := @EditorCaretMoved;
   Result.Adapter := TATAdapterEControl.Create(Result.Sheet);
   Result.Adapter.AddEditor(Result.Editor);
+  ApplyTheme(Result.Editor, FTheme); // keep new tabs consistent with the active theme
   FTabs.Add(Result);
   UpdateCaption(Result);
   FPages.ActivePage := Result.Sheet;
@@ -277,6 +290,75 @@ begin
       Break;
     end;
   RaiseState;
+end;
+
+procedure TTabManager.SetTheme(const ATheme: TEditorTheme);
+var i: Integer;
+begin
+  FTheme := ATheme;
+  for i := 0 to FTabs.Count - 1 do
+    ApplyTheme(TEditorTab(FTabs[i]).Editor, FTheme);
+end;
+
+function TTabManager.CurrentThemeName: string;
+begin
+  Result := FTheme.Name;
+end;
+
+function TTabManager.TabCount: Integer;
+begin
+  Result := FTabs.Count;
+end;
+
+function TTabManager.TabAt(AIndex: Integer): TEditorTab;
+begin
+  if (AIndex >= 0) and (AIndex < FTabs.Count) then
+    Result := TEditorTab(FTabs[AIndex])
+  else
+    Result := nil;
+end;
+
+function TTabManager.ActiveIndex: Integer;
+var i: Integer;
+begin
+  Result := -1;
+  if FPages.ActivePage = nil then Exit;
+  for i := 0 to FTabs.Count - 1 do
+    if TEditorTab(FTabs[i]).Sheet = FPages.ActivePage then
+      Exit(i);
+end;
+
+procedure TTabManager.ActivateIndex(AIndex: Integer);
+begin
+  if (AIndex >= 0) and (AIndex < FTabs.Count) then
+  begin
+    FPages.ActivePage := TEditorTab(FTabs[AIndex]).Sheet;
+    PageChanged;
+  end;
+end;
+
+procedure TTabManager.SetCaret(ATab: TEditorTab; ALine, ACol: Integer);
+begin
+  if ATab = nil then Exit;
+  if ALine < 0 then ALine := 0;
+  if ACol < 0 then ACol := 0;
+  ATab.Editor.DoGotoPos(
+    Point(ACol, ALine),
+    Point(-1, -1),
+    10, 5,
+    True,
+    TATEditorActionIfFolded.Unfold,
+    False, False);
+end;
+
+procedure TTabManager.GetCaret(ATab: TEditorTab; out ALine, ACol: Integer);
+var c: TATCaretItem;
+begin
+  ALine := 0; ACol := 0;
+  if (ATab = nil) or (ATab.Editor.Carets.Count = 0) then Exit;
+  c := ATab.Editor.Carets[0];
+  ALine := c.PosY;
+  ACol := c.PosX;
 end;
 
 procedure TTabManager.RaiseState;
