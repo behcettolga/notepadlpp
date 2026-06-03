@@ -13,10 +13,7 @@ uses
   Classes, SysUtils, StrUtils, Forms, Controls, ExtCtrls, Menus, ComCtrls, Dialogs,
   uDocumentManager, uLexers, uTabManager, uDocument, uEncoding, uEditorActions,
   uFindDialog, uFindResultsPanel, uFindInFilesDialog, uFindInFiles, uSearchResults,
-  uJsonTool, uXmlTool, uConvertersDlg, uCsvViewer;
-
-const
-  MaxRecent = 10;
+  uJsonTool, uXmlTool, uConvertersDlg, uCsvViewer, uConfig, uSession, uTheme;
 
 type
 
@@ -43,9 +40,18 @@ type
     FStatus: TStatusBar;
     FConvDlg: TConvertersDlg;
     FCsvViewer: TCsvViewer;
+    FConfig: TConfig;
+    FSession: TSession;
+    FThemeLightItem: TMenuItem;
+    FThemeDarkItem: TMenuItem;
     procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OpenCommandLineFiles;
+    function RestoreSession: Integer;
+    procedure PersistState;
+    procedure RestoreWindowState;
+    procedure DoSetTheme(Sender: TObject);
+    procedure ApplyThemeByName(const AName: string);
     procedure BuildMenu;
     function AddItem(AParent: TMenuItem; const ACaption: string;
       AOnClick: TNotifyEvent; const AShortcut: string = ''): TMenuItem;
@@ -108,6 +114,13 @@ begin
 
   FRecent := TStringList.Create;
 
+  // Persisted settings + last session (both tolerate missing/corrupt files).
+  FConfig := TConfig.Create;
+  FConfig.Load;
+  FRecent.Assign(FConfig.RecentFiles); // seed the Recent menu from last run
+  FSession := TSession.Create;
+  FSession.Load;
+
   FDocs := TDocumentManager.Create;
 
   FLexers := TLexerLibrary.Create;
@@ -134,10 +147,12 @@ begin
   FTabs := TTabManager.Create(FPages, FDocs, FLexers);
   FTabs.OnState := @TabsState;
   FTabs.OnCaretMove := @UpdateStatus;
+  FTabs.SetTheme(ThemeByName(FConfig.Theme)); // new tabs inherit this
 
   BuildMenu;
 
-  OpenCommandLineFiles; // opens files passed as arguments; else one empty tab
+  OpenCommandLineFiles; // CLI args, else restore last session, else one empty tab
+  RestoreWindowState;   // last geometry, if we have a valid one
   UpdateTitle;
 end;
 
@@ -158,11 +173,89 @@ begin
     end;
   end;
   if opened = 0 then
+    opened := RestoreSession; // reopen last working set
+  if opened = 0 then
     FTabs.NewTab; // start with one empty document
+end;
+
+function TMainForm.RestoreSession: Integer;
+var
+  i: Integer;
+  e: TSessionEntry;
+  tab: TEditorTab;
+begin
+  Result := 0;
+  for i := 0 to FSession.Count - 1 do
+  begin
+    e := FSession.Entry(i);
+    if FileExists(e.FilePath) then
+    begin
+      FTabs.OpenFileInTab(e.FilePath);
+      tab := FTabs.ActiveTab;
+      if tab <> nil then
+        FTabs.SetCaret(tab, e.CaretLine, e.CaretCol);
+      AddRecent(e.FilePath);
+      Inc(Result);
+    end;
+  end;
+  if (Result > 0) and (FSession.ActiveIndex >= 0) then
+    FTabs.ActivateIndex(FSession.ActiveIndex);
+end;
+
+procedure TMainForm.RestoreWindowState;
+var ws: TWindowState;
+begin
+  ws := FConfig.WindowState;
+  if not ws.Valid then Exit;
+  if ws.Maximized then
+    WindowState := wsMaximized
+  else if (ws.Width > 100) and (ws.Height > 100) then
+    SetBounds(ws.Left, ws.Top, ws.Width, ws.Height);
+end;
+
+procedure TMainForm.PersistState;
+var
+  i, savedActive: Integer;
+  tab: TEditorTab;
+  ln, col: Integer;
+  ws: TWindowState;
+begin
+  if FConfig = nil then Exit;
+
+  // preferences: theme + recent list + window geometry
+  FConfig.Theme := FTabs.CurrentThemeName;
+  FConfig.ClearRecent;
+  // FRecent is most-recent-first; AddRecentFile prepends, so feed it oldest-first.
+  for i := FRecent.Count - 1 downto 0 do
+    FConfig.AddRecentFile(FRecent[i]);
+
+  ws.Valid := True;
+  ws.Maximized := WindowState = wsMaximized;
+  ws.Left := Left; ws.Top := Top; ws.Width := Width; ws.Height := Height;
+  FConfig.WindowState := ws;
+  FConfig.Save;
+
+  // session: the saved (non-untitled) tabs and the active one among them
+  FSession.Clear;
+  savedActive := -1;
+  for i := 0 to FTabs.TabCount - 1 do
+  begin
+    tab := FTabs.TabAt(i);
+    if (tab <> nil) and (not tab.Doc.Untitled) then
+    begin
+      FTabs.GetCaret(tab, ln, col);
+      FSession.AddFile(tab.Doc.FilePath, ln, col);
+      if i = FTabs.ActiveIndex then
+        savedActive := FSession.Count - 1;
+    end;
+  end;
+  FSession.ActiveIndex := savedActive;
+  FSession.Save;
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
+  PersistState; // save settings + session while tabs/docs still exist
   if FFifThread <> nil then
   begin
     FFifThread.CancelSearch;
@@ -175,6 +268,8 @@ begin
   FLexers.Free;
   FDocs.Free;
   FRecent.Free;
+  FSession.Free;
+  FConfig.Free;
 end;
 
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -200,7 +295,7 @@ end;
 
 procedure TMainForm.BuildMenu;
 var
-  fileMenu, editMenu, searchMenu, toolsMenu, sep: TMenuItem;
+  fileMenu, editMenu, searchMenu, toolsMenu, viewMenu, themeMenu, sep: TMenuItem;
 begin
   FMenu := TMainMenu.Create(Self);
   Self.Menu := FMenu;
@@ -268,6 +363,37 @@ begin
   sep := TMenuItem.Create(FMenu); sep.Caption := '-'; toolsMenu.Add(sep);
   AddItem(toolsMenu, 'View as &CSV Grid...', @DoCsvView);
   AddItem(toolsMenu, '&Converters...', @DoConverters);
+
+  viewMenu := TMenuItem.Create(FMenu);
+  viewMenu.Caption := '&View';
+  FMenu.Items.Add(viewMenu);
+  themeMenu := TMenuItem.Create(FMenu);
+  themeMenu.Caption := '&Theme';
+  viewMenu.Add(themeMenu);
+  // RadioItem pair; Tag 0 = light, 1 = dark; DoSetTheme reads the caption-free Tag.
+  FThemeLightItem := AddItem(themeMenu, '&Light', @DoSetTheme);
+  FThemeLightItem.RadioItem := True; FThemeLightItem.Tag := 0;
+  FThemeDarkItem := AddItem(themeMenu, '&Dark', @DoSetTheme);
+  FThemeDarkItem.RadioItem := True; FThemeDarkItem.Tag := 1;
+  // reflect the theme restored from config
+  ApplyThemeByName(FConfig.Theme);
+end;
+
+procedure TMainForm.DoSetTheme(Sender: TObject);
+begin
+  if (Sender as TMenuItem).Tag = 1 then
+    ApplyThemeByName('dark')
+  else
+    ApplyThemeByName('light');
+end;
+
+procedure TMainForm.ApplyThemeByName(const AName: string);
+var t: TEditorTheme;
+begin
+  t := ThemeByName(AName);
+  FTabs.SetTheme(t); // live: repaints every open editor
+  if FThemeLightItem <> nil then FThemeLightItem.Checked := t.Name = 'light';
+  if FThemeDarkItem <> nil then FThemeDarkItem.Checked := t.Name = 'dark';
 end;
 
 procedure TMainForm.DoNew(Sender: TObject);
@@ -681,7 +807,7 @@ begin
   idx := FRecent.IndexOf(AFileName);
   if idx >= 0 then FRecent.Delete(idx);
   FRecent.Insert(0, AFileName);
-  while FRecent.Count > MaxRecent do
+  while FRecent.Count > FConfig.MaxRecent do
     FRecent.Delete(FRecent.Count - 1);
   RebuildRecentMenu;
 end;
