@@ -12,7 +12,8 @@ interface
 uses
   Classes, SysUtils, StrUtils, Forms, Controls, ExtCtrls, Menus, ComCtrls, Dialogs,
   uDocumentManager, uLexers, uTabManager, uDocument, uEncoding, uEditorActions,
-  uFindDialog, uFindResultsPanel, uFindInFilesDialog, uFindInFiles, uSearchResults;
+  uFindDialog, uFindResultsPanel, uFindInFilesDialog, uFindInFiles, uSearchResults,
+  uJsonTool, uXmlTool, uConvertersDlg, uCsvViewer;
 
 const
   MaxRecent = 10;
@@ -40,6 +41,8 @@ type
     FFifThread: TFindInFilesThread;
     FFifPattern: string;
     FStatus: TStatusBar;
+    FConvDlg: TConvertersDlg;
+    FCsvViewer: TCsvViewer;
     procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OpenCommandLineFiles;
@@ -66,6 +69,13 @@ type
     procedure DoEditAction(Sender: TObject);
     procedure SetEncoding(Sender: TObject);
     procedure SetEol(Sender: TObject);
+    procedure DoJsonPretty(Sender: TObject);
+    procedure DoJsonMinify(Sender: TObject);
+    procedure DoJsonValidate(Sender: TObject);
+    procedure DoXmlFormat(Sender: TObject);
+    procedure DoXmlValidate(Sender: TObject);
+    procedure DoCsvView(Sender: TObject);
+    procedure DoConverters(Sender: TObject);
     procedure DoRecentClick(Sender: TObject);
     procedure PagesChange(Sender: TObject);
     procedure TabsState(Sender: TObject);
@@ -190,7 +200,7 @@ end;
 
 procedure TMainForm.BuildMenu;
 var
-  fileMenu, editMenu, searchMenu, sep: TMenuItem;
+  fileMenu, editMenu, searchMenu, toolsMenu, sep: TMenuItem;
 begin
   FMenu := TMainMenu.Create(Self);
   Self.Menu := FMenu;
@@ -245,6 +255,19 @@ begin
   AddItem(searchMenu, '&Find...', @DoFindReplace, 'Ctrl+F');
   AddItem(searchMenu, '&Replace...', @DoFindReplace, 'Ctrl+H');
   AddItem(searchMenu, 'Find in &Files...', @DoFindInFiles, 'Ctrl+Shift+F');
+
+  toolsMenu := TMenuItem.Create(FMenu);
+  toolsMenu.Caption := '&Tools';
+  FMenu.Items.Add(toolsMenu);
+  AddItem(toolsMenu, 'JSON: &Pretty-print', @DoJsonPretty);
+  AddItem(toolsMenu, 'JSON: &Minify', @DoJsonMinify);
+  AddItem(toolsMenu, 'JSON: &Validate', @DoJsonValidate);
+  sep := TMenuItem.Create(FMenu); sep.Caption := '-'; toolsMenu.Add(sep);
+  AddItem(toolsMenu, 'XML: &Format', @DoXmlFormat);
+  AddItem(toolsMenu, 'XML: V&alidate', @DoXmlValidate);
+  sep := TMenuItem.Create(FMenu); sep.Caption := '-'; toolsMenu.Add(sep);
+  AddItem(toolsMenu, 'View as &CSV Grid...', @DoCsvView);
+  AddItem(toolsMenu, '&Converters...', @DoConverters);
 end;
 
 procedure TMainForm.DoNew(Sender: TObject);
@@ -559,6 +582,73 @@ begin
   FTabs.UpdateCaption(FTabs.ActiveTab);
   UpdateStatus(Sender);
   UpdateTitle;
+end;
+
+procedure TMainForm.DoJsonPretty(Sender: TObject);
+var err, res: string;
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  res := JsonPretty(FTabs.ActiveTextLF, err);
+  if err <> '' then MessageDlg('JSON', 'Invalid JSON: ' + err, mtError, [mbOK], 0)
+  else FTabs.SetActiveTextLF(res);
+  UpdateStatus(Sender); UpdateTitle;
+end;
+
+procedure TMainForm.DoJsonMinify(Sender: TObject);
+var err, res: string;
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  res := JsonMinify(FTabs.ActiveTextLF, err);
+  if err <> '' then MessageDlg('JSON', 'Invalid JSON: ' + err, mtError, [mbOK], 0)
+  else FTabs.SetActiveTextLF(res);
+  UpdateStatus(Sender); UpdateTitle;
+end;
+
+procedure TMainForm.DoJsonValidate(Sender: TObject);
+var err: string;
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  if JsonValidate(FTabs.ActiveTextLF, err) then
+    MessageDlg('JSON', 'Valid JSON.', mtInformation, [mbOK], 0)
+  else
+    MessageDlg('JSON', 'Invalid JSON: ' + err, mtError, [mbOK], 0);
+end;
+
+procedure TMainForm.DoXmlFormat(Sender: TObject);
+var err, res: string;
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  res := XmlFormat(FTabs.ActiveTextLF, err);
+  if err <> '' then MessageDlg('XML', 'Invalid XML: ' + err, mtError, [mbOK], 0)
+  else FTabs.SetActiveTextLF(res);
+  UpdateStatus(Sender); UpdateTitle;
+end;
+
+procedure TMainForm.DoXmlValidate(Sender: TObject);
+var err: string;
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  if XmlValidate(FTabs.ActiveTextLF, err) then
+    MessageDlg('XML', 'Well-formed XML.', mtInformation, [mbOK], 0)
+  else
+    MessageDlg('XML', 'Not well-formed: ' + err, mtError, [mbOK], 0);
+end;
+
+procedure TMainForm.DoCsvView(Sender: TObject);
+begin
+  if FTabs.ActiveTab = nil then Exit;
+  if FCsvViewer = nil then
+    FCsvViewer := TCsvViewer.CreateNewDlg(Self);
+  FCsvViewer.ShowCsv(FTabs.ActiveTextLF);
+  FCsvViewer.Show;
+end;
+
+procedure TMainForm.DoConverters(Sender: TObject);
+begin
+  if FConvDlg = nil then
+    FConvDlg := TConvertersDlg.CreateNewDlg(Self);
+  FConvDlg.SetInput(FTabs.ActiveTextLF);
+  FConvDlg.Show;
 end;
 
 procedure TMainForm.DoRecentClick(Sender: TObject);
