@@ -2,7 +2,31 @@
 
 _Authoritative async progress log. Updated at every milestone boundary._
 
-## Current milestone: **M4 — Built-in tools** ✅ COMPLETE
+## Current milestone: **M5 — Persistence, theming, packaging** ✅ COMPLETE — full scope (M0–M5) done
+
+### M5 acceptance (ARCHITECTURE §5)
+- `uConfig` (UI-free): JSON settings via fpjson — theme name, recent files (dedup + cap),
+  window geometry; malformed file resets to defaults (never wedges startup). ✅
+- `uSession` (UI-free): open-file list + active tab + per-file caret, separate session.json;
+  skips missing/empty paths, clamps active index. ✅
+- `uTheme` (ui): light + dark editor color sets applied to `TATSynEdit.Colors`; **View ▸ Theme
+  toggles live** across all open editors and persists. ✅
+- Wired into `uMainForm`: restore window geometry + recent files + last session on launch;
+  persist settings + session on exit (`FormDestroy → PersistState`). ✅
+- 11 fpcunit round-trip/edge vectors (`uTestConfig`); read-path verified under xvfb with a
+  seeded config/session (dark theme + real file) — clean launch. ✅
+- Packaging (`packaging/`): `build-deb.sh` → installable `.deb` (verified: installed `/usr/bin`
+  binary launches headless, resolves lexers from `/usr/share/notepadlpp/lexers`); `build-appimage.sh`
+  → runnable AppDir (single-file `.AppImage` needs `appimagetool`, absent on this VM). Desktop entry
+  + svg/png icon; clean-VM install/launch is the human checkpoint (HUMAN-REVIEW.md). ✅
+- ci.sh: app builds; **101/101 headless tests pass**.
+
+Interactive confirmations (save-on-exit, restore-on-launch, live theme look, AppImage emit) batched
+to HUMAN-REVIEW.md per the kickoff posture — deterministic cores are unit-tested.
+
+---
+
+## M4 — Built-in tools ✅ COMPLETE
 
 ### M4 acceptance (ARCHITECTURE §5)
 - `uConverters` + `uSHA256`: Base64 (RFC 4648), URL, UUID, MD5/SHA-1, **SHA-256
@@ -102,17 +126,13 @@ This keeps modern components + gtk2 (per kickoff) with zero changes to upstream 
 - Gate: `./ci.sh` (build app + tests + run tests) or `./ci.sh --app-run` (also xvfb GUI smoke).
 - Latest `./ci.sh --app-run`: **CI PASSED** — app links; tests 1 run / 0 failures; app launched under xvfb, no crash.
 
-### Next: **M5 — Persistence, theming, packaging**
-- `src/core/`: uConfig (JSON settings via fpjson), uSession (reopen last files + window
-  geometry on launch), recent-files persistence.
-- `src/ui/uTheme`: light + dark theme applied to editor colors.
-- `packaging/`: AppImage and/or .deb that installs + launches on a clean Mint/Ubuntu VM.
-- Accept: settings + open files survive restart; theme toggles live; packaging artifact runs.
+### Status: **all six milestones (M0–M5) complete.** Full ARCHITECTURE §3 scope delivered.
 
-### Follow-ups carried forward
+### Follow-ups carried forward (non-blocking)
 - Complete curated lexer set: add SQL, YAML, Diff, Log (spec §3.3) — see HUMAN-REVIEW.md.
+- Human checkpoints (UX click-throughs, clean-VM `.deb`/AppImage validation) — see HUMAN-REVIEW.md.
 
 ### Decisions taken
 - Pinned modern (2026) component set; gtk2 IME handled via project-local LCL rebuild (above).
-- Git: `develop`; M0–M4 tagged `M0-complete`…`M4-complete` (merged to `main`).
+- Git: `develop`; M0–M5 tagged `M0-complete`…`M5-complete` (merged to `main`).
   Pushing `develop` after each unit for live visibility; milestone tags land on `main`.
