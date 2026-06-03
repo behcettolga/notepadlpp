@@ -3,7 +3,7 @@ unit uSession;
 
 {$mode objfpc}{$H+}
 
-{ Workspace session: which files were open and which tab was active, so a launch
+(* Workspace session: which files were open and which tab was active, so a launch
   can restore the previous working set (ARCHITECTURE §3.2, §4). UI-free core model.
 
   Kept separate from uConfig on purpose: uConfig is durable user *preferences*
@@ -17,7 +17,7 @@ unit uSession;
                  { "path":"/b.pas", "line":42, "col":4 } ]
     }
   Entries with a missing/empty path are skipped on load; a malformed file loads as
-  an empty session rather than raising. }
+  an empty session rather than raising. *)
 
 interface
 

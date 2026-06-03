@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=NotepadL++
+GenericName=Text Editor
+Comment=Fast native text and source code editor
+Exec=notepadlpp %F
+TryExec=notepadlpp
+Icon=notepadlpp
+Terminal=false
+Categories=Utility;TextEditor;Development;
+MimeType=text/plain;text/x-csrc;text/x-pascal;application/json;application/xml;text/csv;
+Keywords=editor;text;source;code;notepad;
+StartupNotify=true
+StartupWMClass=notepadlpp

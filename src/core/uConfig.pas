@@ -3,7 +3,7 @@ unit uConfig;
 
 {$mode objfpc}{$H+}
 
-{ Persistent application settings, stored as JSON (CudaText-style, ARCHITECTURE
+(* Persistent application settings, stored as JSON (CudaText-style, ARCHITECTURE
   §3.4). UI-free core model (§4): holds recent-files list, theme name, and window
   geometry, and round-trips them through a JSON file. The file path is injectable
   so the suite can exercise load/save against a temp file with no UI or HOME deps.
@@ -18,7 +18,7 @@ unit uConfig;
     }
   Unknown keys are ignored; missing keys fall back to defaults. A malformed file
   never raises out of Load — it resets to defaults so a corrupt config can't wedge
-  startup. }
+  startup. *)
 
 interface
 

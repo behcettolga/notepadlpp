@@ -35,8 +35,39 @@ _Audit these asynchronously. Each entry: what was done automatically + what to j
   All driven by the unit-tested tool cores. Builds + launches clean. To judge later (not blocking):
   interactive click-through of the converters dialog + CSV grid layout/usability.
 
+- **[M5] Persistence + theming** (`uConfig`, `uSession`, `uTheme`, wired into `uMainForm`).
+  Settings/session JSON round-trip is unit-tested (11 vectors in `uTestConfig`); the UI wiring
+  built clean and the **read path is verified automatically**: a seeded `config.json` (theme=dark,
+  saved geometry) + `session.json` (one real file) launches with no crash under xvfb. To confirm
+  interactively (not blocking, can't be driven headlessly):
+  - **Save-on-exit:** `FormDestroy → PersistState` writes `~/.config/notepadlpp/{config,session}.json`
+    only on a *clean* shutdown (window close / Ctrl+Q). Verify the files appear and reflect the
+    last theme, recent-files list, window box, and open tabs + caret positions.
+  - **Restore-on-launch:** reopen the app → previous files come back on the right tabs, active tab
+    and carets restored, window returns to its last size/position.
+  - **Live theme toggle:** View ▸ Theme ▸ Light/Dark recolors all open editors immediately and the
+    choice survives a restart. Eyeball the dark palette (BGR values in `uTheme`) for contrast/taste —
+    these are first-pass colors, easy to tune.
+  - Edge: a `session.json` listing a file that was deleted/moved is silently skipped on restore
+    (by design); confirm that feels right vs. showing a "missing file" notice.
+
 ## Packaging (M5, validate on a clean Mint/Ubuntu VM)
-- _none yet._
+- **`.deb` package** — `packaging/build-deb.sh` → `notepadlpp_0.5.0_<arch>.deb` (~2.8 MB).
+  Installs `/usr/bin/notepadlpp`, `/usr/share/notepadlpp/lexers/lib.lxl`, desktop entry, and
+  hicolor icons (svg + 256px png). `Depends:` = gtk2/X11/pango/cairo runtime only (no FPC/Lazarus).
+  **Verified here:** builds clean; `dpkg-deb -x` + launching the installed `/usr/bin` binary under
+  xvfb starts with no crash and resolves lexers from `../share/notepadlpp/lexers`.
+  desktop-file-validate passes (one non-fatal hint: Utility+Development are both main categories —
+  intentional so it shows under both menus).
+- **AppImage** — `packaging/build-appimage.sh` assembles a runnable `NotepadLpp.AppDir` (AppRun
+  verified under xvfb). `appimagetool` is **not installed on this VM**, so the single-file
+  `.AppImage` was not produced here; the script prints the exact fetch command and accepts
+  `APPIMAGETOOL=…`. **Needs a human to run with appimagetool present** to emit + smoke the final
+  `.AppImage`.
+- **Human checkpoint (per kickoff):** on a *clean* Mint/Ubuntu VM — `sudo apt install ./…deb`,
+  confirm the app appears in the menu with icon + name, opens files with highlighting, the Tools
+  menu and theme toggle work, settings/session persist across a restart, then `sudo apt remove
+  notepadlpp` cleans up. Bump `VERSION=` for tagged releases.
 
 ## Known gaps / follow-ups
 - **[M1] Curated lexer set incomplete.** The bundled `lexers/lib.lxl` (from ATSynEdit's lexlib)
